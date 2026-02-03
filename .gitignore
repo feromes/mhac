@@ -1,0 +1,108 @@
+# --------------------------------------------------
+# Dados e artefatos gerados
+# --------------------------------------------------
+
+# Todos os dados processados (rasters, mosaicos, intermediários)
+data/processed/
+
+# Futuro cache ou dados temporários
+data/tmp/
+data/cache/
+
+# --------------------------------------------------
+# LiDAR bruto (nunca versionar)
+# --------------------------------------------------
+
+# LAZ / LAS
+*.laz
+*.las
+*.copc.laz
+
+# EPT / COPC / point cloud structures
+ept/
+*.jsonl
+*.bin
+
+# --------------------------------------------------
+# Raster e vetores derivados
+# --------------------------------------------------
+
+# GeoTIFF
+*.tif
+*.tiff
+
+# Raster intermediário
+*.vrt
+*.aux.xml
+*.ovr
+
+# Vetores intermediários
+*.gpkg
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+
+# --------------------------------------------------
+# Python
+# --------------------------------------------------
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+conda/
+.mamba/
+
+# --------------------------------------------------
+# Logs e arquivos temporários
+# --------------------------------------------------
+
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# --------------------------------------------------
+# Sistema operacional
+# --------------------------------------------------
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --------------------------------------------------
+# IDEs e editores
+# --------------------------------------------------
+
+.vscode/
+.idea/
+*.code-workspace
+
+# --------------------------------------------------
+# Jupyter (se aparecer depois)
+# --------------------------------------------------
+
+.ipynb_checkpoints/
+
+# --------------------------------------------------
+# Documentação gerada
+# --------------------------------------------------
+
+_build/
+site/
+dist/
