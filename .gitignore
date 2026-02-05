@@ -9,6 +9,7 @@ data/processed/
 data/tmp/
 data/cache/
 data/audit/
+data/city_mosaics/
 
 # --------------------------------------------------
 # Jobs e logs de processamento

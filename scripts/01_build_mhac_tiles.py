@@ -105,6 +105,7 @@ def build_pdal_pipeline(
         pipeline["pipeline"].append({
             "type": "readers.las",
             "filename": str(laz),
+            "override_srs": "EPSG:31983"
         })
 
     # 2. Merge
@@ -113,7 +114,7 @@ def build_pdal_pipeline(
     # 3. Remoção de vegetação (classes 3, 4, 5)
     pipeline["pipeline"].append({
         "type": "filters.range",
-        "limits": "Classification![3:5]"
+        "limits": "Classification![3:5],Classification![19:19]"
     })
 
     # 4. Altura normalizada
@@ -134,6 +135,11 @@ def build_pdal_pipeline(
         "dimension": "Z",
         "data_type": "float32",
         "nodata": NODATA,
+        "gdaldriver":"GTiff",
+        "gdalopts":"COMPRESS=ZSTD,PREDICTOR=3,BIGTIFF=YES,TILED=YES",
+        "where": "(Classification != 3 && Classification != 4 && Classification != 5 && Classification != 19)",
+        "default_srs": "EPSG:31983",
+        "override_srs": "EPSG:31983",
     })
 
     # 6. Raster HAG
@@ -149,6 +155,11 @@ def build_pdal_pipeline(
         "dimension": "HeightAboveGround",
         "data_type": "float32",
         "nodata": NODATA,
+        "gdaldriver":"GTiff",
+        "gdalopts":"COMPRESS=ZSTD,PREDICTOR=3,BIGTIFF=YES,TILED=YES",
+        "where": "(Classification != 3 && Classification != 4 && Classification != 5 && Classification != 19)",
+        "default_srs": "EPSG:31983",
+        "override_srs": "EPSG:31983",
     })
 
     return pipeline
