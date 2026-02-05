@@ -8,6 +8,7 @@ data/processed/
 # Futuro cache ou dados temporários
 data/tmp/
 data/cache/
+data/audit/
 
 # --------------------------------------------------
 # Jobs e logs de processamento
