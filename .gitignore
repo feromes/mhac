@@ -10,6 +10,8 @@ data/tmp/
 data/cache/
 data/audit/
 data/city_mosaics/
+data/iptu/
+data/iptu_canonical/
 
 # --------------------------------------------------
 # Jobs e logs de processamento

@@ -9,7 +9,6 @@ import sys
 # --------------------------------------------------
 
 MHAC_BASE = Path("/Users/fernandogomes/MacLab/mhac")
-
 DATA_BASE = MHAC_BASE / "data/processed"
 
 YEARS = [2017, 2020, 2024]
@@ -38,52 +37,23 @@ def run(cmd):
 # PIPELINE
 # --------------------------------------------------
 
-def process_product_year(product, year):
+def process_product_year(product, year, fill_nodata=False):
 
     print("\n====================================================")
     print(f"PROCESSANDO: {product.upper()} | {year}")
     print("====================================================")
 
-    def ensure_projection(tiles_dir, epsg="EPSG:31983"):
-
-        fixed_dir = tiles_dir.parent / (tiles_dir.name + "_fixed")
-        fixed_dir.mkdir(exist_ok=True)
-
-        tifs = list(tiles_dir.glob("*.tif"))
-
-        print(f"Verificando CRS de {len(tifs)} tiles...")
-
-        for tif in tifs:
-
-            info = subprocess.run(
-                ["gdalinfo", str(tif)],
-                capture_output=True,
-                text=True
-            ).stdout
-
-            has_crs = "Coordinate System is:" in info and "null" not in info
-
-            out = fixed_dir / tif.name
-
-            if has_crs:
-                subprocess.run(["cp", str(tif), str(out)])
-            else:
-                print(f"Fixando CRS: {tif.name}")
-                subprocess.run([
-                    "gdal_translate",
-                    str(tif),
-                    str(out),
-                    "-a_srs", epsg
-                ])
-
-        return fixed_dir
-
-    # tiles_dir = DATA_BASE / str(year) / PRODUCT_DIRS[product]
-    tiles_dir_raw = DATA_BASE / str(year) / PRODUCT_DIRS[product]
-    tiles_dir = ensure_projection(tiles_dir_raw)
+    tiles_dir = DATA_BASE / str(year) / PRODUCT_DIRS[product]
 
     if not tiles_dir.exists():
         print(f"⚠️ Diretório inexistente: {tiles_dir}")
+        return
+
+    tifs = sorted(tiles_dir.glob("*.tif"))
+    print(f"Total de tiles encontrados: {len(tifs)}")
+
+    if not tifs:
+        print("⚠️ Nenhum TIFF encontrado.")
         return
 
     vrt = OUTPUT_DIR / f"{product}_{year}.vrt"
@@ -91,28 +61,29 @@ def process_product_year(product, year):
     mosaic_nodata = OUTPUT_DIR / f"{product}_{year}_mosaic_nodata.tif"
     mosaic_filled = OUTPUT_DIR / f"{product}_{year}_mosaic_filled.tif"
 
-    tifs = sorted(str(p) for p in tiles_dir.glob("*.tif"))
+    # --------------------------------------------------
+    # FILELIST (robusto para milhares de tiles)
+    # --------------------------------------------------
 
-    if not tifs:
-        print("⚠️ Nenhum TIFF encontrado.")
-        return
+    filelist = OUTPUT_DIR / f"{product}_{year}_tiles.txt"
+    filelist.write_text("\n".join(str(p) for p in tifs))
 
     # --------------------------------------------------
     # 1. BUILD VRT
     # --------------------------------------------------
 
-    print("\n[1/4] Construindo VRT...")
+    print("\n[1/3] Construindo VRT...")
     run([
         "gdalbuildvrt",
-        str(vrt),
-        *tifs
+        "-input_file_list", str(filelist),
+        str(vrt)
     ])
 
     # --------------------------------------------------
     # 2. TRANSLATE
     # --------------------------------------------------
 
-    print("\n[2/4] Gerando mosaico GeoTIFF...")
+    print("\n[2/3] Gerando mosaico GeoTIFF...")
     run([
         "gdal_translate",
         str(vrt),
@@ -126,7 +97,7 @@ def process_product_year(product, year):
     # 3. PADRONIZANDO NODATA
     # --------------------------------------------------
 
-    print("\n[3/4] Padronizando NODATA...")
+    print("\n[3/3] Padronizando NODATA...")
     run([
         "gdalwarp",
         "-dstnodata", "-9999",
@@ -136,19 +107,21 @@ def process_product_year(product, year):
     ])
 
     # --------------------------------------------------
-    # 4. FILL NODATA
+    # 4. FILL (opcional)
     # --------------------------------------------------
 
-    print("\n[4/4] Preenchendo NODATA...")
-    run([
-        "gdal_fillnodata.py",
-        "-md", "50",
-        "-si", "2",
-        str(mosaic_nodata),
-        str(mosaic_filled)
-    ])
-
-    print("\n✅ Finalizado:", mosaic_filled)
+    if fill_nodata:
+        print("\n[4/4] Preenchendo NODATA...")
+        run([
+            "gdal_fillnodata.py",
+            "-md", "50",
+            "-si", "2",
+            str(mosaic_nodata),
+            str(mosaic_filled)
+        ])
+        print("\n✅ Finalizado:", mosaic_filled)
+    else:
+        print("\n✅ Finalizado:", mosaic_nodata)
 
 # --------------------------------------------------
 # MAIN
@@ -159,6 +132,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--year", type=int)
     parser.add_argument("--product", type=str)
+    parser.add_argument("--fill", action="store_true", help="Executar fillnodata")
     args = parser.parse_args()
 
     years = [args.year] if args.year else YEARS
@@ -166,7 +140,7 @@ def main():
 
     for year in years:
         for product in products:
-            process_product_year(product, year)
+            process_product_year(product, year, fill_nodata=args.fill)
 
 if __name__ == "__main__":
     main()

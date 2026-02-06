@@ -84,7 +84,7 @@ def main():
                 continue
 
             cmd = (
-                f"python scripts/01_build_mhac_tiles.py "
+                f"python scripts/lidar/01_build_mhac_tiles.py "
                 f"--year {year} "
                 f"--tile-id {tile_id}"
             )

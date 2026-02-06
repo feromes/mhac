@@ -138,7 +138,7 @@ def build_pdal_pipeline(
         "gdaldriver":"GTiff",
         "gdalopts":"COMPRESS=ZSTD,PREDICTOR=3,BIGTIFF=YES,TILED=YES",
         "where": "(Classification != 3 && Classification != 4 && Classification != 5 && Classification != 19)",
-        "default_srs": "EPSG:31983",
+        # "default_srs": "EPSG:31983",
         "override_srs": "EPSG:31983",
     })
 
@@ -158,7 +158,7 @@ def build_pdal_pipeline(
         "gdaldriver":"GTiff",
         "gdalopts":"COMPRESS=ZSTD,PREDICTOR=3,BIGTIFF=YES,TILED=YES",
         "where": "(Classification != 3 && Classification != 4 && Classification != 5 && Classification != 19)",
-        "default_srs": "EPSG:31983",
+        # "default_srs": "EPSG:31983",
         "override_srs": "EPSG:31983",
     })
 
