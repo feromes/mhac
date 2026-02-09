@@ -12,6 +12,7 @@ data/audit/
 data/city_mosaics/
 data/iptu/
 data/iptu_canonical/
+data/downloads/
 
 # --------------------------------------------------
 # Jobs e logs de processamento
