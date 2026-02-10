@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import math
 
 import geopandas as gpd
 import rasterio
@@ -19,7 +18,7 @@ from tqdm import tqdm
 
 BASE_DIR = Path("/Users/fernandogomes/MacLab/mhac")
 
-QUADRAS_GPKG = BASE_DIR / "data/downloads/SIRGAS_GPKG_quadraMDSF.gpkg"
+QUADRAS_GPKG = BASE_DIR / "data/downloads/SIRGAS_GPKG_quadraMDSF-DISSOLVIDO.gpkg"
 CITY_MOSAICS_DIR = BASE_DIR / "data/city_mosaics"
 
 OUTPUT_DIR = BASE_DIR / "data/zonal_stats"
@@ -35,6 +34,26 @@ def compute_pixel_area(raster_path: Path) -> float:
     with rasterio.open(raster_path) as ds:
         res_x, res_y = ds.res
     return abs(res_x * res_y)
+
+
+def load_filtered_raster(raster_path: Path, min_height: float = 2.0):
+    """
+    Carrega o raster e converte TODOS os pixels inválidos
+    (<= min_height e nodata original) em np.nan.
+    """
+    with rasterio.open(raster_path) as ds:
+        data = ds.read(1).astype("float32")
+        affine = ds.transform
+        nodata = ds.nodata
+
+    invalid = (data <= min_height)
+    if nodata is not None:
+        invalid |= (data == nodata)
+
+    data[invalid] = np.nan
+
+    return data, affine
+
 
 
 def parse_args():
@@ -102,6 +121,16 @@ def main():
     print("→ Lendo quadras fiscais...")
     gdf = gpd.read_file(QUADRAS_GPKG)
 
+    # -----------------------------------------------------------------
+    # Geração do identificador SQ (Setor + Quadra)
+    # -----------------------------------------------------------------
+
+    gdf["qd_setor"] = gdf["qd_setor"].astype(str).str.zfill(3)
+    gdf["qd_fiscal"] = gdf["qd_fiscal"].astype(str).str.zfill(3)
+
+    gdf["SQ"] = gdf["qd_setor"] + gdf["qd_fiscal"]
+
+
     if args.limit:
         gdf = gdf.head(args.limit)
 
@@ -110,7 +139,7 @@ def main():
     print(f"→ Quadras selecionadas: {len(gdf)}")
 
     # -----------------------------------------------------------------
-    # Preparação de métricas geométricas
+    # Preparação geométrica
     # -----------------------------------------------------------------
 
     pixel_area = compute_pixel_area(raster_path)
@@ -119,12 +148,20 @@ def main():
     gdf["count_total"] = (gdf["area_m2"] / pixel_area).round().astype("Int64")
 
     # -----------------------------------------------------------------
+    # Carregar raster filtrado (HAG > 2.0)
+    # -----------------------------------------------------------------
+
+    print("→ Carregando raster filtrado (pixels > 2.0 m)...")
+    raster_data, raster_affine = load_filtered_raster(
+        raster_path, min_height=2.0
+    )
+
+    # -----------------------------------------------------------------
     # Estatísticas zonais em blocos
     # -----------------------------------------------------------------
 
     print("→ Calculando estatísticas zonais em blocos...")
 
-    # n_chunks = math.ceil(len(gdf) / args.chunk_size)
     chunks = [
         gdf.iloc[i : i + args.chunk_size]
         for i in range(0, len(gdf), args.chunk_size)
@@ -137,7 +174,8 @@ def main():
 
         stats = zonal_stats(
             geoms,
-            raster_path,
+            raster_data,
+            affine=raster_affine,
             stats=[
                 "count",
                 "min",
@@ -147,7 +185,7 @@ def main():
                 "median",
                 "std",
             ],
-            nodata=None,
+            nodata=np.nan,
             geojson_out=False,
             all_touched=False,
         )
@@ -158,10 +196,13 @@ def main():
 
         chunk_reset = chunk.reset_index(drop=True)
 
-        partial = chunk_reset[["qd_id", "geometry", "area_m2", "count_total"]].copy()
+        partial = chunk_reset[
+            ["qd_id", "SQ", "qd_setor", "qd_fiscal", "geometry", "area_m2", "count_total"]
+        ].copy()
+
         partial = partial.join(stats_df)
 
-        # Derivadas
+        # Derivadas (AGORA só pixels > 2m)
         partial["valid_frac"] = partial["count_valid"] / partial["count_total"]
         partial["nodata_frac"] = 1.0 - partial["valid_frac"]
         partial["valid_area_m2"] = partial["count_valid"] * pixel_area
@@ -169,6 +210,7 @@ def main():
         # Metadados
         partial["year"] = args.year
         partial["raster"] = args.raster
+        partial["height_threshold_m"] = 2.0
 
         all_results.append(partial)
 

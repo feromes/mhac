@@ -13,6 +13,8 @@ data/city_mosaics/
 data/iptu/
 data/iptu_canonical/
 data/downloads/
+data/cadastro/
+data/lotes
 
 # --------------------------------------------------
 # Jobs e logs de processamento
@@ -50,11 +52,14 @@ ept/
 
 # Vetores intermediários
 *.gpkg
+*.gpkg-shm
+*.gpkg-wal
 *.shp
 *.shx
 *.dbf
 *.prj
 *.cpg
+*.csv
 
 # --------------------------------------------------
 # Python
